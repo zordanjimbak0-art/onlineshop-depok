@@ -1,0 +1,12 @@
+*.cpp linguist-language=C++
+*.cs linguist-language=C#
+*.rs linguist-language=Rust
+*.go linguist-language=Go
+*.ts linguist-language=TypeScript
+*.gd linguist-language=GDScript
+*.glsl linguist-language=GLSL
+*.lua linguist-language=Lua
+*.java linguist-language=Java
+*.php linguist-language=PHP
+*.ps1 linguist-language=PowerShell
+*.sql linguist-language=TSQL

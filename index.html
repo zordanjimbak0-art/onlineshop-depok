@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Online Shop Depok — Custom Packaging, Digital Assets & Gaming Gear</title>
+  <style>
+    :root { --bg:#0B0F19; --card:#131C2E; --accent:#00F2FE; --green:#10B981; --text:#F8FAFC; --muted:#94A3B8; }
+    * { box-sizing:border-box; margin:0; padding:0; font-family:'Segoe UI',system-ui,sans-serif; }
+    body { background:var(--bg); color:var(--text); padding:28px 18px; }
+    .wrap { max-width:1120px; margin:0 auto; }
+    header { display:flex; justify-content:space-between; align-items:center; padding:20px 28px; background:var(--card); border-radius:14px; border:1px solid #1E293B; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
+    .brand { font-size:22px; font-weight:900; color:var(--accent); }
+    .cart-pill { background:var(--green); color:#04130D; padding:10px 18px; border-radius:99px; font-weight:800; cursor:pointer; }
+    .hero { background:linear-gradient(135deg,#0F172A,#1E1B4B); padding:36px; border-radius:16px; border:1px solid rgba(0,242,254,0.3); margin-bottom:28px; display:grid; grid-template-columns:1.3fr 1fr; gap:24px; align-items:center; }
+    .hero h1 { font-size:32px; margin-bottom:12px; }
+    .hero p { color:var(--muted); line-height:1.6; margin-bottom:18px; }
+    .hero img { width:100%; border-radius:12px; border:1px solid #334155; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; }
+    .item { background:var(--card); border:1px solid #1E293B; border-radius:14px; padding:20px; display:flex; flex-direction:column; justify-content:space-between; }
+    .item h3 { font-size:18px; margin-bottom:8px; color:#38BDF8; }
+    .price { font-size:20px; font-weight:900; color:var(--green); margin:12px 0; }
+    button { background:linear-gradient(90deg,#00F2FE,#4FACFE); color:#050811; border:none; padding:11px 16px; border-radius:8px; font-weight:800; cursor:pointer; width:100%; }
+    button:hover { opacity:0.9; }
+    @media(max-width:768px){ .hero { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">🛒 ONLINE SHOP DEPOK • DAFFA OFFICIAL STORE</div>
+      <div class="cart-pill" onclick="checkout()">🛍️ Keranjang: <span id="cnt">0</span> Item (Checkout)</div>
+    </header>
+    <div class="hero">
+      <div>
+        <h1>Pusat Kemasan Custom, Desain 3D &amp; Produk Digital Depok</h1>
+        <p>Melayani cetak cup plastik PP/PET, kemasan box custom kualitas industri (Tapos, Depok), pembuatan aset 3D Blender Cycles, serta software utilitas gaming.</p>
+      </div>
+      <img src="./assets/cup_3d_showcase.png" alt="3D Packaging Render" />
+    </div>
+    <div class="grid">
+      <div class="item">
+        <div><h3>🥤 Sablon &amp; Cetak Cup PP/PET Custom (1.000 pcs)</h3><p style="color:var(--muted);font-size:14px;">Cetak presisi tinggi tahan dingin/panas untuk brand kopi &amp; minuman kekinian area Depok &amp; Jabodetabek.</p></div>
+        <div><div class="price">Rp 450.000</div><button onclick="add('Cetak Cup PP/PET 1000pcs', 450000)">+ Tambah ke Keranjang</button></div>
+      </div>
+      <div class="item">
+        <div><h3>📦 Custom Packaging Box Folding Carton + Dieline 3D</h3><p style="color:var(--muted);font-size:14px;">Termasuk desain struktur pisau pond Adobe Illustrator &amp; preview render 3D Blender Cycles fotorealistik.</p></div>
+        <div><div class="price">Rp 650.000</div><button onclick="add('Custom Box + 3D Render', 650000)">+ Tambah ke Keranjang</button></div>
+      </div>
+      <div class="item">
+        <div><h3>🎮 Daffa Master Command Center v6.0 Pro Suite</h3><p style="color:var(--muted);font-size:14px;">Dashboard manajemen game, optimasi VRAM RX 580, dan integrasi tema Cyberpunk.</p></div>
+        <div><div class="price">GRATIS (Open Source)</div><button onclick="window.location.href='https://github.com/zordanjimbak0-art/daffa-master-astra'">🚀 Buka Repository</button></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    let cart = [];
+    function add(name, price) {
+      cart.push({name, price});
+      document.getElementById('cnt').innerText = cart.length;
+    }
+    function checkout() {
+      if (!cart.length) { alert('Keranjang masih kosong! Silakan pilih produk terlebih dahulu.'); return; }
+      let total = cart.reduce((s, x) => s + x.price, 0);
+      alert('Pesanan Online Shop Depok:\n- ' + cart.map(x=>x.name).join('\n- ') + '\n\nTotal: Rp ' + total.toLocaleString('id-ID'));
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Custom Cup & Box Configurator — Online Shop Depok (CV Cetak Cup)</title>
+  <style>
+    :root { --bg:#070B14; --panel:#111827; --accent:#00F2FE; --green:#10B981; --text:#F8FAFC; --muted:#94A3B8; }
+    * { box-sizing:border-box; margin:0; padding:0; font-family:'Segoe UI',system-ui,sans-serif; }
+    body { background:var(--bg); color:var(--text); display:flex; height:100vh; overflow:hidden; }
+    #sidebar {
+      width:360px; background:var(--panel); border-right:1px solid #1E293B; padding:24px;
+      display:flex; flex-direction:column; gap:18px; overflow-y:auto; z-index:10;
+    }
+    .brand { font-size:18px; font-weight:900; color:var(--accent); letter-spacing:1px; }
+    .sub { font-size:13px; color:var(--muted); line-height:1.5; }
+    .group { background:#1E293B; padding:14px; border-radius:10px; border:1px solid #334155; }
+    .group label { display:block; font-size:12px; font-weight:700; color:#38BDF8; margin-bottom:8px; text-transform:uppercase; }
+    select, input[type="color"], input[type="text"], input[type="file"] {
+      width:100%; padding:9px; border-radius:8px; border:1px solid #475569; background:#0F172A; color:white; font-size:13px;
+    }
+    .btn {
+      padding:12px 16px; border-radius:9px; border:none; font-weight:800; cursor:pointer; font-size:14px;
+      text-decoration:none; text-align:center; display:block;
+    }
+    .btn-primary { background:linear-gradient(90deg,#00F2FE,#4FACFE); color:#050811; }
+    .btn-green { background:var(--green); color:#04130D; }
+    .btn-dark { background:#334155; color:white; }
+    #canvas-wrap { flex:1; position:relative; background:radial-gradient(circle at center, #1E293B 0%, #070B14 75%); }
+    #hud {
+      position:absolute; top:20px; right:20px; background:rgba(15,23,42,0.85); border:1px solid var(--accent);
+      padding:12px 18px; border-radius:10px; font-size:13px; color:var(--text); pointer-events:none;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <div id="sidebar">
+    <div class="brand">🎨 3D PACKAGING STUDIO DEPOK</div>
+    <div class="sub">Simulasi real-time kemasan Cup PP/PET &amp; Folding Box 3D (CV Cetak Cup Tapos Depok). Geser mouse untuk memutar 360°.</div>
+
+    <div class="group">
+      <label>1. Pilih Model Kemasan 3D</label>
+      <select id="modelType" onchange="rebuildMesh()">
+        <option value="cup">🥤 Cup Plastik PP/PET 16oz + Dome Lid</option>
+        <option value="box">📦 Folding Carton Box Kemasan</option>
+      </select>
+    </div>
+
+    <div class="group">
+      <label>2. Warna Dasar / Tinta Sablon</label>
+      <input type="color" id="baseColor" value="#00F2FE" onchange="updateMaterial()" />
+    </div>
+
+    <div class="group">
+      <label>3. Teks Brand / Nama Kopi pada Cup</label>
+      <input type="text" id="brandText" value="KOPI DEPOK PREMIUM" oninput="updateLabelTexture()" />
+    </div>
+
+    <div class="group">
+      <label>4. Upload Logo Sendiri (PNG/JPG)</label>
+      <input type="file" id="logoInput" accept="image/*" onchange="uploadCustomLogo(event)" />
+    </div>
+
+    <button class="btn btn-primary" onclick="toggleSpin()">🔄 Putar Otomatis (On/Off)</button>
+    <a class="btn btn-green" href="./index.html">🛒 Kembali ke Katalog Toko Online</a>
+    <a class="btn btn-dark" href="https://zordanjimbak0-art.github.io/daffa-master-astra/portal.html">⚡ Buka Astra Command Portal</a>
+  </div>
+
+  <div id="canvas-wrap">
+    <div id="hud">🖱️ Klik &amp; Tahan: Putar 360° | Scroll: Zoom In/Out</div>
+  </div>
+
+  <script>
+    const wrap = document.getElementById('canvas-wrap');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, wrap.clientWidth / wrap.clientHeight, 0.1, 100);
+    camera.position.set(0, 1.4, 5.2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    wrap.appendChild(renderer.domElement);
+
+    const amb = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(amb);
+    const dir1 = new THREE.DirectionalLight(0xffffff, 1.2);
+    dir1.position.set(5, 8, 6);
+    scene.add(dir1);
+    const dir2 = new THREE.PointLight(0x00f2fe, 0.9, 20);
+    dir2.position.set(-5, 3, 4);
+    scene.add(dir2);
+
+    // Pedestal platform
+    const platGeo = new THREE.CylinderGeometry(1.8, 2.0, 0.15, 48);
+    const platMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.3 });
+    const plat = new THREE.Mesh(platGeo, platMat);
+    plat.position.y = -1.55;
+    scene.add(plat);
+
+    let rootGroup = new THREE.Group();
+    scene.add(rootGroup);
+    let customImg = null;
+    let autoSpin = true;
+
+    function createLabelCanvas() {
+      const c = document.createElement('canvas');
+      c.width = 1024; c.height = 512;
+      const ctx = c.getContext('2d');
+      const col = document.getElementById('baseColor').value;
+      const txt = document.getElementById('brandText').value || 'CV CETAK CUP DEPOK';
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, c.width, c.height);
+
+      ctx.fillStyle = col;
+      ctx.fillRect(0, 60, c.width, 392);
+
+      ctx.fillStyle = '#070B14';
+      ctx.font = 'bold 58px Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(txt, c.width / 2, 265);
+
+      ctx.font = 'bold 28px monospace';
+      ctx.fillText('PP/PET HIGH PRECISION SCREEN PRINTING • DEPOK', c.width / 2, 330);
+
+      if (customImg) {
+        ctx.drawImage(customImg, c.width / 2 - 90, 75, 180, 120);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.needsUpdate = true;
+      return tex;
+    }
+
+    function rebuildMesh() {
+      while (rootGroup.children.length > 0) rootGroup.remove(rootGroup.children[0]);
+      const mode = document.getElementById('modelType').value;
+      const tex = createLabelCanvas();
+
+      if (mode === 'cup') {
+        // Cup body
+        const cupGeo = new THREE.CylinderGeometry(0.95, 0.62, 2.5, 64, 1, false);
+        const cupMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.18, metalness: 0.08 });
+        const cup = new THREE.Mesh(cupGeo, cupMat);
+        rootGroup.add(cup);
+
+        // Rim
+        const rimGeo = new THREE.TorusGeometry(0.96, 0.05, 16, 64);
+        const rimMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.2 });
+        const rim = new THREE.Mesh(rimGeo, rimMat);
+        rim.rotation.x = Math.PI / 2;
+        rim.position.y = 1.25;
+        rootGroup.add(rim);
+
+        // Dome lid
+        const domeGeo = new THREE.SphereGeometry(0.95, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2.1);
+        const domeMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, roughness: 0.05 });
+        const dome = new THREE.Mesh(domeGeo, domeMat);
+        dome.position.y = 1.25;
+        rootGroup.add(dome);
+
+        // Straw
+        const strawGeo = new THREE.CylinderGeometry(0.06, 0.06, 1.4, 24);
+        const strawMat = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.3 });
+        const straw = new THREE.Mesh(strawGeo, strawMat);
+        straw.position.set(0.15, 2.0, 0);
+        straw.rotation.z = -0.15;
+        rootGroup.add(straw);
+      } else {
+        // Folding Carton Box
+        const boxGeo = new THREE.BoxGeometry(1.9, 2.4, 1.4);
+        const boxMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.3, metalness: 0.05 });
+        const box = new THREE.Mesh(boxGeo, boxMat);
+        rootGroup.add(box);
+      }
+    }
+
+    function updateMaterial() { rebuildMesh(); }
+    function updateLabelTexture() { rebuildMesh(); }
+    function toggleSpin() { autoSpin = !autoSpin; }
+
+    function uploadCustomLogo(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        const img = new Image();
+        img.onload = function() {
+          customImg = img;
+          rebuildMesh();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    let isDragging = false, prevX = 0, prevY = 0;
+    wrap.addEventListener('mousedown', e => { isDragging = true; prevX = e.clientX; prevY = e.clientY; });
+    window.addEventListener('mouseup', () => isDragging = false);
+    window.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      rootGroup.rotation.y += (e.clientX - prevX) * 0.01;
+      rootGroup.rotation.x = Math.max(-0.6, Math.min(0.6, rootGroup.rotation.x + (e.clientY - prevY) * 0.008));
+      prevX = e.clientX; prevY = e.clientY;
+    });
+    wrap.addEventListener('wheel', e => {
+      camera.position.z = Math.max(2.8, Math.min(9.0, camera.position.z + e.deltaY * 0.003));
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = wrap.clientWidth / wrap.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+    });
+
+    rebuildMesh();
+    function animate() {
+      requestAnimationFrame(animate);
+      if (autoSpin && !isDragging) rootGroup.rotation.y += 0.007;
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
